@@ -20,6 +20,7 @@ import {
   GetApp as GetAppIcon, SmartToy as SmartToyIcon, ExpandMore as ExpandMoreIcon,
   MoreVert as MoreVertIcon, ClearAll as ClearAllIcon, Layers as LayersIcon,
   Print as PrintIcon, Share as ShareIcon, NotificationsActive as AlertIcon,
+  Computer as ComputerIcon,
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -220,7 +221,6 @@ const gerarIA = (stats,grupos,casos) => {
 
 
 const MemoizedMap = React.memo(({center,zoom,mapType,viewMode,showHeatmap,grupos,casos,infoId,onCase,onGroup,onClose})=>{
-  // Estado local para controlar o hover
   const [hoveredId, setHoveredId] = useState(null);
   const [hoverTimeout, setHoverTimeout] = useState(null);
 
@@ -244,12 +244,11 @@ const MemoizedMap = React.memo(({center,zoom,mapType,viewMode,showHeatmap,grupos
     window.google?.maps ? casos.filter(c=>c.status==='confirmado').map(c=>new window.google.maps.LatLng(c.coordenadas.lat, c.coordenadas.lng)) : []
   ,[casos]);
 
-  // Handler para mostrar info no hover com delay
   const handleMouseOver = useCallback((id) => {
     if (hoverTimeout) clearTimeout(hoverTimeout);
     const timeout = setTimeout(() => {
       setHoveredId(id);
-    }, 300); // delay de 300ms para evitar flicker
+    }, 300);
     setHoverTimeout(timeout);
   }, [hoverTimeout]);
 
@@ -261,7 +260,6 @@ const MemoizedMap = React.memo(({center,zoom,mapType,viewMode,showHeatmap,grupos
     setHoveredId(null);
   }, [hoverTimeout]);
 
-  // Limpar timeout quando o componente desmontar
   useEffect(() => {
     return () => {
       if (hoverTimeout) {
@@ -295,7 +293,6 @@ const MemoizedMap = React.memo(({center,zoom,mapType,viewMode,showHeatmap,grupos
             onMouseOver={() => handleMouseOver(`g-${b}`)}
             onMouseOut={handleMouseOut}
           >
-            {/* Mostrar info no hover OU no clique */}
             {(hoveredId === `g-${b}` || infoId === `g-${b}`) && (
               <InfoWindow 
                 onCloseClick={onClose}
@@ -354,7 +351,6 @@ const MemoizedMap = React.memo(({center,zoom,mapType,viewMode,showHeatmap,grupos
             onMouseOut={handleMouseOut}
             animation={window.google?.maps?.Animation?.DROP}
           >
-            {/* Mostrar info no hover OU no clique */}
             {(hoveredId === caso.id || infoId === caso.id) && (
               <InfoWindow 
                 onCloseClick={onClose}
@@ -424,7 +420,6 @@ const MemoizedMap = React.memo(({center,zoom,mapType,viewMode,showHeatmap,grupos
   );
 });
 
-// Adicionar display name para melhor debug
 MemoizedMap.displayName = 'MemoizedMap';
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
@@ -440,7 +435,7 @@ export default function MapaCasos() {
   const [lastUpdate,setLast]   = useState(null);
   const [mapReady, setMapReady] = useState(false);
 
-  // Mapa - estado inicial
+  // Mapa
   const [center,setCenter]   = useState({lat:-8.8368,lng:13.2343});
   const [zoom,setZoom]       = useState(6);
   const [mapType,setMapType] = useState('roadmap');
@@ -460,7 +455,10 @@ export default function MapaCasos() {
   const [notifs,setNotifs]     = useState([]);
   const [showNotif,setShowN]   = useState(false);
 
-  // Filtros unificados
+  // ─── BANNER MOBILE ────────────────────────────────────────────────────────
+  const [mobileBanner, setMobileBanner] = useState(true);
+
+  // Filtros
   const [F,setFiltros] = useState({ busca:'', status:'todos', gravidade:'todos', bairro:'todos', dateFrom:null, dateTo:null });
   const setF = (k,v) => setFiltros(p=>({...p,[k]:v}));
   const clearF = () => setFiltros({ busca:'', status:'todos', gravidade:'todos', bairro:'todos', dateFrom:null, dateTo:null });
@@ -473,13 +471,9 @@ export default function MapaCasos() {
     setShowN(true);
   },[]);
 
-  // 1. Primeiro declaramos grupos (depende apenas de casos)
   const grupos = useMemo(() => groupByBairro(casos), [casos]);
-  
-  // 2. Depois declaramos bairroOpts (depende de grupos)
   const bairroOpts = useMemo(() => ['todos', ...Object.keys(grupos).sort()], [grupos]);
   
-  // 3. Depois declaramos casosF (depende de casos e F)
   const casosF = useMemo(() => casos.filter(c => {
     const q = F.busca.toLowerCase();
     if (q && !c.agente.toLowerCase().includes(q) && !c.id.toLowerCase().includes(q) && !c.bairro?.toLowerCase().includes(q) && !c.notas?.toLowerCase().includes(q)) return false;
@@ -491,10 +485,8 @@ export default function MapaCasos() {
     return true;
   }), [casos, F]);
   
-  // 4. Depois declaramos gruposF (depende de casosF)
   const gruposF = useMemo(() => groupByBairro(casosF), [casosF]);
   
-  // 5. Depois declaramos stats (depende de casos, casosF e grupos)
   const stats = useMemo(() => ({
     total: casos.length, 
     filtrados: casosF.length,
@@ -509,15 +501,12 @@ export default function MapaCasos() {
     bairros: Object.keys(grupos).length,
   }), [casos, casosF, grupos]);
   
-  // 6. Depois declaramos ia (depende de stats, grupos e casos)
   const ia = useMemo(() => casos.length > 0 ? gerarIA(stats, grupos, casos) : 'Sem dados. Aguardando registros…', [stats, grupos, casos]);
 
-  // 7. Função calculateBounds (não depende de estados que mudam frequentemente)
   const calculateBounds = useCallback((casosList) => {
     if (!casosList || casosList.length === 0) {
       return { center: { lat: -8.8368, lng: 13.2343 }, zoom: 6 };
     }
-
     const casosValidos = casosList.filter(c => 
       c.coordenadas && 
       typeof c.coordenadas.lat === 'number' && 
@@ -525,33 +514,23 @@ export default function MapaCasos() {
       !isNaN(c.coordenadas.lat) && 
       !isNaN(c.coordenadas.lng)
     );
-
     if (casosValidos.length === 0) {
       return { center: { lat: -8.8368, lng: 13.2343 }, zoom: 6 };
     }
-
     let minLat = Math.min(...casosValidos.map(c => c.coordenadas.lat));
     let maxLat = Math.max(...casosValidos.map(c => c.coordenadas.lat));
     let minLng = Math.min(...casosValidos.map(c => c.coordenadas.lng));
     let maxLng = Math.max(...casosValidos.map(c => c.coordenadas.lng));
-
     const latMargin = (maxLat - minLat) * 0.1;
     const lngMargin = (maxLng - minLng) * 0.1;
-    
     minLat = Math.max(-90, minLat - latMargin);
     maxLat = Math.min(90, maxLat + latMargin);
     minLng = Math.max(-180, minLng - lngMargin);
     maxLng = Math.min(180, maxLng + lngMargin);
-
-    const center = {
-      lat: (minLat + maxLat) / 2,
-      lng: (minLng + maxLng) / 2
-    };
-
+    const center = { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 };
     const latDiff = maxLat - minLat;
     const lngDiff = maxLng - minLng;
     const maxDiff = Math.max(latDiff, lngDiff);
-    
     let zoom;
     if (maxDiff < 0.01) zoom = 15;
     else if (maxDiff < 0.05) zoom = 13;
@@ -559,11 +538,9 @@ export default function MapaCasos() {
     else if (maxDiff < 0.5) zoom = 9;
     else if (maxDiff < 1) zoom = 7;
     else zoom = 6;
-
     return { center, zoom };
   }, []);
 
-  // 8. Firebase effect (agora pode usar calculateBounds)
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -577,7 +554,6 @@ export default function MapaCasos() {
         setMapReady(true);
         return; 
       }
-      
       const arr = Object.entries(data).map(([id, c]) => ({
         id, 
         agente: c.agente || 'Desconhecido',
@@ -594,7 +570,6 @@ export default function MapaCasos() {
         bairro: c.bairro || 'Desconhecido', 
         notas: c.notas || '',
       }));
-      
       const enriched = await Promise.all(arr.map(async c => {
         if (c.bairro === 'Desconhecido' && c.coordenadas.lat && c.coordenadas.lng) {
           const b = await getBairro(c.coordenadas.lat, c.coordenadas.lng, MAPS_KEY);
@@ -605,15 +580,12 @@ export default function MapaCasos() {
         }
         return c;
       }));
-      
       if (alive) { 
         setCasos(enriched); 
         setLast(new Date()); 
-        
         const { center: newCenter, zoom: newZoom } = calculateBounds(enriched);
         setCenter(newCenter);
         setZoom(newZoom);
-        
         setLoading(false); 
         setMapReady(true);
         addN(`${enriched.length} casos carregados e mapa ajustado`, 'success'); 
@@ -626,19 +598,16 @@ export default function MapaCasos() {
       }
     });
     return () => { alive = false; unsub(); off(r); };
-  }, [addN, calculateBounds]); // Remove calculateBounds das dependências se for estável
+  }, [addN, calculateBounds]);
 
-  // 9. Efeito opcional para ajustar mapa quando filtros mudarem (AGORA PODE USAR casosF)
   useEffect(() => {
     if (casosF.length > 0 && mapReady) {
-      // Descomente se quiser ajustar automático
       const { center: newCenter, zoom: newZoom } = calculateBounds(casosF);
       setCenter(newCenter);
       setZoom(newZoom);
     }
-  }, [casosF, mapReady]); // Remove calculateBounds se não for usar
+  }, [casosF, mapReady]);
 
-  // 10. Handlers (dependem de casos, casosF, etc)
   const goToCase = useCallback(caso => {
     setSel(caso); 
     setCenter(caso.coordenadas); 
@@ -686,7 +655,6 @@ export default function MapaCasos() {
     }
   }, [casosF, calculateBounds, addN]);
 
-
   const reload = ()=>{ setLoading(true); setTimeout(()=>{ setLoading(false); addN('Dados actualizados','success'); },1500); };
 
   const exportCSV = useCallback(()=>{
@@ -717,6 +685,132 @@ export default function MapaCasos() {
     if(navigator.share){ await navigator.share({title:'VigiCólera Uige',text}).catch(()=>{}); }
     else { await navigator.clipboard.writeText(text).catch(()=>{}); addN('Resumo copiado!','info'); }
   },[stats,addN]);
+
+  // ─── Banner Mobile ─────────────────────────────────────────────────────────
+  const MobileBanner = () => (
+    <Collapse in={isMobile && mobileBanner}>
+      <Box sx={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1400,
+        background: 'linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #0a1628 100%)',
+        borderTop: '1px solid rgba(26,115,232,0.5)',
+        px: 2,
+        pt: 2,
+        pb: 2.5,
+        boxShadow: '0 -8px 32px rgba(0,0,0,0.6)',
+      }}>
+        {/* Linha decorativa topo */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: 2,
+          background: 'linear-gradient(90deg, transparent, #1a73e8, #00bcd4, #1a73e8, transparent)',
+        }}/>
+
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+          {/* Ícone */}
+          <Box sx={{
+            width: 42, height: 42,
+            borderRadius: 2.5,
+            flexShrink: 0,
+            background: 'linear-gradient(135deg, rgba(26,115,232,0.25), rgba(0,188,212,0.15))',
+            border: '1px solid rgba(26,115,232,0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mt: 0.3,
+          }}>
+            <Typography sx={{ fontSize: '1.3rem', lineHeight: 1 }}>🖥️</Typography>
+          </Box>
+
+          {/* Texto */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography sx={{
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              color: '#e8f0fe',
+              lineHeight: 1.3,
+              mb: 0.5,
+              letterSpacing: 0.1,
+            }}>
+              Para melhor visualização, use o computador
+            </Typography>
+            <Typography sx={{
+              fontSize: '0.7rem',
+              color: 'rgba(255,255,255,0.5)',
+              lineHeight: 1.55,
+            }}>
+              O mapa epidemiológico e todos os dados são optimizados para ecrãs maiores. Recomendamos aceder pelo computador ou tablet.
+            </Typography>
+
+            {/* Badges informativos */}
+            <Box sx={{ display: 'flex', gap: 0.6, mt: 1, flexWrap: 'wrap' }}>
+              {['Mapa completo', 'Filtros avançados', 'Análise IA', 'Exportação'].map(label => (
+                <Chip
+                  key={label}
+                  label={label}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.58rem',
+                    bgcolor: 'rgba(26,115,232,0.15)',
+                    color: 'rgba(26,115,232,0.9)',
+                    border: '1px solid rgba(26,115,232,0.25)',
+                    '& .MuiChip-label': { px: 0.8 },
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
+
+          {/* Botão fechar */}
+          <IconButton
+            size="small"
+            onClick={() => setMobileBanner(false)}
+            sx={{
+              color: 'rgba(255,255,255,0.35)',
+              flexShrink: 0,
+              mt: -0.3,
+              width: 28,
+              height: 28,
+              '&:hover': {
+                color: 'rgba(255,255,255,0.8)',
+                bgcolor: 'rgba(255,255,255,0.08)',
+              },
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Box>
+
+        {/* Botão de acção */}
+        <Button
+          fullWidth
+          variant="outlined"
+          size="small"
+          onClick={() => setMobileBanner(false)}
+          sx={{
+            mt: 1.5,
+            borderColor: 'rgba(26,115,232,0.4)',
+            color: 'rgba(26,115,232,0.9)',
+            fontSize: '0.72rem',
+            borderRadius: 2,
+            py: 0.6,
+            textTransform: 'none',
+            '&:hover': {
+              borderColor: '#1a73e8',
+              bgcolor: 'rgba(26,115,232,0.08)',
+            },
+          }}
+        >
+          Continuar mesmo assim no telemóvel
+        </Button>
+      </Box>
+    </Collapse>
+  );
 
   // ─── Painel Único de Filtros + Lista ────────────────────────────────────────
   const SidePanel = () => (
@@ -1117,20 +1211,19 @@ export default function MapaCasos() {
                     <Typography variant="caption" color="text.secondary">A carregar mapa…</Typography>
                   </Box>
                 }>
-               // No componente principal MapaCasos, onde o MemoizedMap é usado:
-<MemoizedMap
-  center={center} 
-  zoom={zoom} 
-  mapType={mapType} 
-  viewMode={viewMode} 
-  showHeatmap={heatmap}
-  grupos={gruposF} 
-  casos={casosF} 
-  infoId={infoId}
-  onCase={goToCase} 
-  onGroup={goToGroup} 
-  onClose={() => setInfoId(null)} // Importante: limpar o infoId quando fechar
-/>
+                <MemoizedMap
+                  center={center} 
+                  zoom={zoom} 
+                  mapType={mapType} 
+                  viewMode={viewMode} 
+                  showHeatmap={heatmap}
+                  grupos={gruposF} 
+                  casos={casosF} 
+                  infoId={infoId}
+                  onCase={goToCase} 
+                  onGroup={goToGroup} 
+                  onClose={() => setInfoId(null)}
+                />
               </LoadScript>
 
               {/* Pill contagem */}
@@ -1372,6 +1465,9 @@ export default function MapaCasos() {
               {notifs.at(-1)?.msg||''}
             </Alert>
           </Snackbar>
+
+          {/* ─── Banner Mobile — Recomendação de uso no computador ─────────────── */}
+          <MobileBanner />
 
         </Box>
       </LocalizationProvider>
