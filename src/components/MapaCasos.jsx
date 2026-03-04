@@ -367,10 +367,8 @@ export default function MapaCasos() {
   const [previewUrl, setPreviewUrl]         = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // ── NOVO: painel análise desktop ────────────────────────────────────────
-  const [showAnalyse, setShowAnalyse] = useState(false);
-
-  // Navegação mobile — 0=mapa, 1=lista, 2=análise
+  // ── toggle dos 3 botões superiores direitos ─────────────────────────────
+  const [showTools, setShowTools] = useState(true);
   const [mobileTab, setMobileTab] = useState(0);
 
   // Filtros
@@ -769,131 +767,175 @@ export default function MapaCasos() {
     </Box>
   );
 
-  // ─── Sidebar Desktop ──────────────────────────────────────────────────────
+  // ─── Sidebar Desktop — com tabs Filtros/Lista e Análise ─────────────────
+  const [sideTab, setSideTab] = useState(0); // 0=filtros+lista, 1=análise
+
   const SidePanel = () => (
     <Box sx={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
-      <Box sx={{px:2,py:1.5,display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.08)',flexShrink:0}}>
-        <Typography variant="subtitle2" fontWeight={700} sx={{fontSize:'0.85rem',display:'flex',alignItems:'center',gap:.8}}>
-          <FilterIcon sx={{fontSize:16,color:'primary.main'}}/>
-          Filtros &amp; Lista
-          {nActiveF>0&&<Chip label={nActiveF} color="primary" size="small" sx={{height:18,fontSize:'0.62rem',ml:.5}}/>}
-        </Typography>
-        <Box sx={{display:'flex',gap:.5}}>
-          {nActiveF>0&&<Tooltip title="Limpar filtros"><IconButton size="small" onClick={clearF} color="warning"><ClearAllIcon sx={{fontSize:16}}/></IconButton></Tooltip>}
-          {!isDesk&&<IconButton size="small" onClick={()=>setSidebar(false)}><CloseIcon sx={{fontSize:16}}/></IconButton>}
-        </Box>
-      </Box>
-      <Box sx={{px:2,pt:1.5,pb:1,borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
-        <TextField fullWidth size="small" placeholder="Buscar…"
-          value={F.busca} onChange={e=>setF('busca',e.target.value)}
-          InputProps={{
-            startAdornment:<InputAdornment position="start"><SearchIcon sx={{fontSize:17,color:'text.secondary'}}/></InputAdornment>,
-            endAdornment:F.busca?<InputAdornment position="end"><IconButton size="small" onClick={()=>setF('busca','')}><CloseIcon sx={{fontSize:13}}/></IconButton></InputAdornment>:null,
-            sx:{borderRadius:2,fontSize:'0.83rem'},
-          }}
-          sx={{mb:1.5}}
-        />
-        <Grid container spacing={1}>
-          <Grid item xs={6}>
-            <FormControl fullWidth size="small">
-              <InputLabel sx={{fontSize:'0.78rem'}}>Status</InputLabel>
-              <Select value={F.status} label="Status" onChange={e=>setF('status',e.target.value)} sx={{borderRadius:2,fontSize:'0.78rem'}}>
-                <MenuItem value="todos">Todos</MenuItem>
-                <MenuItem value="confirmado">✗ Confirmado</MenuItem>
-                <MenuItem value="suspeito">? Suspeito</MenuItem>
-                <MenuItem value="pendente-analise">· Pendente</MenuItem>
-                <MenuItem value="descartado">✓ Descartado</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={6}>
-            <FormControl fullWidth size="small">
-              <InputLabel sx={{fontSize:'0.78rem'}}>Gravidade</InputLabel>
-              <Select value={F.gravidade} label="Gravidade" onChange={e=>setF('gravidade',e.target.value)} sx={{borderRadius:2,fontSize:'0.78rem'}}>
-                <MenuItem value="todos">Todas</MenuItem>
-                <MenuItem value="critico">🔴 Crítico</MenuItem>
-                <MenuItem value="severa">🟠 Severa</MenuItem>
-                <MenuItem value="moderada">🟡 Moderada</MenuItem>
-                <MenuItem value="leve">🟢 Leve</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12}>
-            <FormControl fullWidth size="small">
-              <InputLabel sx={{fontSize:'0.78rem'}}>Bairro</InputLabel>
-              <Select value={F.bairro} label="Bairro" onChange={e=>setF('bairro',e.target.value)} sx={{borderRadius:2,fontSize:'0.78rem'}}>
-                {bairroOpts.map(b=>(
-                  <MenuItem key={b} value={b} sx={{fontSize:'0.8rem'}}>
-                    <Box sx={{display:'flex',justifyContent:'space-between',width:'100%',alignItems:'center'}}>
-                      <span>{b==='todos'?'Todos os bairros':b}</span>
-                      {b!=='todos'&&grupos[b]&&<Chip label={grupos[b].casos.length} size="small" sx={{ml:1,height:15,fontSize:'0.58rem',bgcolor:'rgba(255,255,255,0.1)'}}/>}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-        {nActiveF>0&&(
-          <Box sx={{display:'flex',flexWrap:'wrap',gap:.5,mt:1}}>
-            {F.status!=='todos'&&<Chip label={F.status} size="small" onDelete={()=>setF('status','todos')} sx={{bgcolor:sc(F.status),color:'white',fontSize:'0.62rem',height:19}}/>}
-            {F.gravidade!=='todos'&&<Chip label={F.gravidade} size="small" onDelete={()=>setF('gravidade','todos')} sx={{bgcolor:gc(F.gravidade),color:'white',fontSize:'0.62rem',height:19}}/>}
-            {F.bairro!=='todos'&&<Chip label={F.bairro} size="small" onDelete={()=>setF('bairro','todos')} color="primary" sx={{fontSize:'0.62rem',height:19}}/>}
+
+      {/* Cabeçalho com tabs */}
+      <Box sx={{flexShrink:0,borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
+        <Box sx={{display:'flex',alignItems:'center',justifyContent:'space-between',px:2,pt:1.5,pb:0}}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{fontSize:'0.82rem',display:'flex',alignItems:'center',gap:.7}}>
+            {sideTab===0
+              ? <><FilterIcon sx={{fontSize:15,color:'primary.main'}}/>Filtros &amp; Lista{nActiveF>0&&<Chip label={nActiveF} color="primary" size="small" sx={{height:17,fontSize:'0.6rem',ml:.5}}/>}</>
+              : <><DashboardIcon sx={{fontSize:15,color:'secondary.main'}}/>Análise</>
+            }
+          </Typography>
+          <Box sx={{display:'flex',gap:.4}}>
+            {sideTab===0&&nActiveF>0&&<Tooltip title="Limpar filtros"><IconButton size="small" onClick={clearF} color="warning"><ClearAllIcon sx={{fontSize:15}}/></IconButton></Tooltip>}
+            {!isDesk&&<IconButton size="small" onClick={()=>setSidebar(false)}><CloseIcon sx={{fontSize:15}}/></IconButton>}
           </Box>
-        )}
-      </Box>
-      <Box sx={{px:2,py:.8,display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
-        <Typography variant="caption" sx={{textTransform:'uppercase',letterSpacing:.8,color:'text.secondary',fontSize:'0.66rem'}}>
-          {viewMode==='agrupado'?'Bairros':'Casos'}
-        </Typography>
-        <Box sx={{display:'flex',alignItems:'center',gap:.5}}>
-          <Chip label={viewMode==='agrupado'?Object.keys(gruposF).length:casosF.length} color="primary" size="small" sx={{height:17,fontSize:'0.62rem'}}/>
-          {casosF.length!==casos.length&&<Typography variant="caption" color="text.disabled" sx={{fontSize:'0.62rem'}}>/ {casos.length}</Typography>}
+        </Box>
+
+        {/* Tab buttons */}
+        <Box sx={{display:'flex',px:1.5,pt:.8,pb:0,gap:.5}}>
+          {[
+            {label:'Lista', icon:<ListNavIcon sx={{fontSize:13}}/>, val:0},
+            {label:'Análise', icon:<DashboardIcon sx={{fontSize:13}}/>, val:1},
+          ].map(({label,icon,val})=>(
+            <Button key={val} size="small" onClick={()=>setSideTab(val)}
+              startIcon={icon}
+              sx={{
+                flex:1, borderRadius:'8px 8px 0 0', py:.7, fontSize:'0.72rem',
+                fontWeight: sideTab===val ? 700 : 400,
+                color: sideTab===val ? (val===0?'primary.main':'secondary.main') : 'text.secondary',
+                bgcolor: sideTab===val ? (val===0?'rgba(26,115,232,0.12)':'rgba(0,188,212,0.1)') : 'transparent',
+                borderBottom: sideTab===val ? `2px solid ${val===0?'#1a73e8':'#00bcd4'}` : '2px solid transparent',
+                '&:hover':{bgcolor: val===0?'rgba(26,115,232,0.08)':'rgba(0,188,212,0.07)'},
+                transition:'all .18s',
+                minWidth:0,
+              }}>
+              {label}
+            </Button>
+          ))}
         </Box>
       </Box>
-      <List dense sx={{flex:1,overflow:'auto',pt:0,pb:1}}>
-        {viewMode==='agrupado'
-          ? Object.keys(gruposF).length===0
-            ? <Box sx={{p:3,textAlign:'center'}}><LocationCityIcon sx={{fontSize:34,color:'text.disabled',mb:1}}/><Typography variant="body2" color="text.disabled">Nenhum bairro</Typography></Box>
-            : Object.entries(gruposF).sort(([,a],[,b])=>b.casos.length-a.casos.length).map(([b,g])=>{
-                const cor=g.confirmados>0?'#ea4335':g.suspeitos>0?'#fbbc05':'#4285f4';
-                return(
-                  <ListItem key={b} disablePadding>
-                    <ListItemButton onClick={()=>goToGroup(b,g)} sx={{borderLeft:`3px solid ${cor}`,mx:1,my:.25,borderRadius:1.5,'&:hover':{bgcolor:'rgba(26,115,232,0.09)'},transition:'all .15s'}}>
-                      <ListItemAvatar><Avatar sx={{bgcolor:cor,width:32,height:32,fontSize:'0.75rem',fontWeight:700}}>{g.casos.length}</Avatar></ListItemAvatar>
-                      <Box sx={{minWidth:0}}>
-                        <Typography variant="body2" fontWeight={600} noWrap sx={{fontSize:'0.8rem'}}>{b}</Typography>
-                        <Box sx={{display:'flex',gap:.35,mt:.2,flexWrap:'wrap'}}>
-                          {g.confirmados>0&&<Chip label={`${g.confirmados}C`} size="small" sx={{bgcolor:'#fce8e6',color:'#c5221f',height:15,fontSize:'0.56rem'}}/>}
-                          {g.suspeitos>0&&<Chip label={`${g.suspeitos}S`} size="small" sx={{bgcolor:'#fef7e0',color:'#e37400',height:15,fontSize:'0.56rem'}}/>}
-                          {g.pendentes>0&&<Chip label={`${g.pendentes}P`} size="small" sx={{bgcolor:'#e8f0fe',color:'#1a73e8',height:15,fontSize:'0.56rem'}}/>}
-                          {g.descartados>0&&<Chip label={`${g.descartados}D`} size="small" sx={{bgcolor:'#e6f4ea',color:'#188038',height:15,fontSize:'0.56rem'}}/>}
+
+      {/* ── Tab 0: Filtros + Lista ──────────────────────────────────────── */}
+      {sideTab===0&&(
+        <>
+          <Box sx={{px:2,pt:1.5,pb:1,borderBottom:'1px solid rgba(255,255,255,0.06)',flexShrink:0}}>
+            <TextField fullWidth size="small" placeholder="Buscar…"
+              value={F.busca} onChange={e=>setF('busca',e.target.value)}
+              InputProps={{
+                startAdornment:<InputAdornment position="start"><SearchIcon sx={{fontSize:17,color:'text.secondary'}}/></InputAdornment>,
+                endAdornment:F.busca?<InputAdornment position="end"><IconButton size="small" onClick={()=>setF('busca','')}><CloseIcon sx={{fontSize:13}}/></IconButton></InputAdornment>:null,
+                sx:{borderRadius:2,fontSize:'0.83rem'},
+              }}
+              sx={{mb:1.5}}
+            />
+            <Grid container spacing={1}>
+              <Grid item xs={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel sx={{fontSize:'0.78rem'}}>Status</InputLabel>
+                  <Select value={F.status} label="Status" onChange={e=>setF('status',e.target.value)} sx={{borderRadius:2,fontSize:'0.78rem'}}>
+                    <MenuItem value="todos">Todos</MenuItem>
+                    <MenuItem value="confirmado">✗ Confirmado</MenuItem>
+                    <MenuItem value="suspeito">? Suspeito</MenuItem>
+                    <MenuItem value="pendente-analise">· Pendente</MenuItem>
+                    <MenuItem value="descartado">✓ Descartado</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel sx={{fontSize:'0.78rem'}}>Gravidade</InputLabel>
+                  <Select value={F.gravidade} label="Gravidade" onChange={e=>setF('gravidade',e.target.value)} sx={{borderRadius:2,fontSize:'0.78rem'}}>
+                    <MenuItem value="todos">Todas</MenuItem>
+                    <MenuItem value="critico">🔴 Crítico</MenuItem>
+                    <MenuItem value="severa">🟠 Severa</MenuItem>
+                    <MenuItem value="moderada">🟡 Moderada</MenuItem>
+                    <MenuItem value="leve">🟢 Leve</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth size="small">
+                  <InputLabel sx={{fontSize:'0.78rem'}}>Bairro</InputLabel>
+                  <Select value={F.bairro} label="Bairro" onChange={e=>setF('bairro',e.target.value)} sx={{borderRadius:2,fontSize:'0.78rem'}}>
+                    {bairroOpts.map(b=>(
+                      <MenuItem key={b} value={b} sx={{fontSize:'0.8rem'}}>
+                        <Box sx={{display:'flex',justifyContent:'space-between',width:'100%',alignItems:'center'}}>
+                          <span>{b==='todos'?'Todos os bairros':b}</span>
+                          {b!=='todos'&&grupos[b]&&<Chip label={grupos[b].casos.length} size="small" sx={{ml:1,height:15,fontSize:'0.58rem',bgcolor:'rgba(255,255,255,0.1)'}}/>}
                         </Box>
-                      </Box>
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })
-          : casosF.length===0
-            ? <Box sx={{p:3,textAlign:'center'}}><SearchIcon sx={{fontSize:34,color:'text.disabled',mb:1}}/><Typography variant="body2" color="text.disabled">Nenhum caso</Typography>{nActiveF>0&&<Button size="small" onClick={clearF} sx={{mt:1,fontSize:'0.72rem'}}>Limpar filtros</Button>}</Box>
-            : casosF.sort((a,b)=>b.timestamp-a.timestamp).map(caso=>(
-                <ListItem key={caso.id} disablePadding>
-                  <ListItemButton selected={sel?.id===caso.id} onClick={()=>goToCase(caso)}
-                    sx={{borderLeft:`3px solid ${sc(caso.status)}`,mx:1,my:.25,borderRadius:1.5,'&:hover':{bgcolor:'rgba(26,115,232,0.09)'},'&.Mui-selected':{bgcolor:'rgba(26,115,232,0.13)'},transition:'all .15s'}}>
-                    <ListItemAvatar><Avatar sx={{bgcolor:sc(caso.status),width:32,height:32,'& svg':{fontSize:15}}}>{SI[caso.status]||<LocationIcon/>}</Avatar></ListItemAvatar>
-                    <Box sx={{minWidth:0,width:'100%'}}>
-                      <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-                        <Typography variant="body2" fontWeight={600} noWrap sx={{fontSize:'0.8rem',flex:1,mr:.5}}>{caso.bairro||'Sem bairro'}</Typography>
-                        <Chip label={caso.gravidade} size="small" sx={{bgcolor:gc(caso.gravidade),color:'white',height:15,fontSize:'0.56rem',flexShrink:0}}/>
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" noWrap sx={{fontSize:'0.68rem'}}>{caso.agente}</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{display:'block',fontSize:'0.65rem'}}>{fdt(caso.dataHora).date}</Typography>
-                    </Box>
-                  </ListItemButton>
-                </ListItem>
-              ))
-        }
-      </List>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+            {nActiveF>0&&(
+              <Box sx={{display:'flex',flexWrap:'wrap',gap:.5,mt:1}}>
+                {F.status!=='todos'&&<Chip label={F.status} size="small" onDelete={()=>setF('status','todos')} sx={{bgcolor:sc(F.status),color:'white',fontSize:'0.62rem',height:19}}/>}
+                {F.gravidade!=='todos'&&<Chip label={F.gravidade} size="small" onDelete={()=>setF('gravidade','todos')} sx={{bgcolor:gc(F.gravidade),color:'white',fontSize:'0.62rem',height:19}}/>}
+                {F.bairro!=='todos'&&<Chip label={F.bairro} size="small" onDelete={()=>setF('bairro','todos')} color="primary" sx={{fontSize:'0.62rem',height:19}}/>}
+              </Box>
+            )}
+          </Box>
+          <Box sx={{px:2,py:.8,display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
+            <Typography variant="caption" sx={{textTransform:'uppercase',letterSpacing:.8,color:'text.secondary',fontSize:'0.66rem'}}>
+              {viewMode==='agrupado'?'Bairros':'Casos'}
+            </Typography>
+            <Box sx={{display:'flex',alignItems:'center',gap:.5}}>
+              <Chip label={viewMode==='agrupado'?Object.keys(gruposF).length:casosF.length} color="primary" size="small" sx={{height:17,fontSize:'0.62rem'}}/>
+              {casosF.length!==casos.length&&<Typography variant="caption" color="text.disabled" sx={{fontSize:'0.62rem'}}>/ {casos.length}</Typography>}
+            </Box>
+          </Box>
+          <List dense sx={{flex:1,overflow:'auto',pt:0,pb:1}}>
+            {viewMode==='agrupado'
+              ? Object.keys(gruposF).length===0
+                ? <Box sx={{p:3,textAlign:'center'}}><LocationCityIcon sx={{fontSize:34,color:'text.disabled',mb:1}}/><Typography variant="body2" color="text.disabled">Nenhum bairro</Typography></Box>
+                : Object.entries(gruposF).sort(([,a],[,b])=>b.casos.length-a.casos.length).map(([b,g])=>{
+                    const cor=g.confirmados>0?'#ea4335':g.suspeitos>0?'#fbbc05':'#4285f4';
+                    return(
+                      <ListItem key={b} disablePadding>
+                        <ListItemButton onClick={()=>goToGroup(b,g)} sx={{borderLeft:`3px solid ${cor}`,mx:1,my:.25,borderRadius:1.5,'&:hover':{bgcolor:'rgba(26,115,232,0.09)'},transition:'all .15s'}}>
+                          <ListItemAvatar><Avatar sx={{bgcolor:cor,width:32,height:32,fontSize:'0.75rem',fontWeight:700}}>{g.casos.length}</Avatar></ListItemAvatar>
+                          <Box sx={{minWidth:0}}>
+                            <Typography variant="body2" fontWeight={600} noWrap sx={{fontSize:'0.8rem'}}>{b}</Typography>
+                            <Box sx={{display:'flex',gap:.35,mt:.2,flexWrap:'wrap'}}>
+                              {g.confirmados>0&&<Chip label={`${g.confirmados}C`} size="small" sx={{bgcolor:'#fce8e6',color:'#c5221f',height:15,fontSize:'0.56rem'}}/>}
+                              {g.suspeitos>0&&<Chip label={`${g.suspeitos}S`} size="small" sx={{bgcolor:'#fef7e0',color:'#e37400',height:15,fontSize:'0.56rem'}}/>}
+                              {g.pendentes>0&&<Chip label={`${g.pendentes}P`} size="small" sx={{bgcolor:'#e8f0fe',color:'#1a73e8',height:15,fontSize:'0.56rem'}}/>}
+                              {g.descartados>0&&<Chip label={`${g.descartados}D`} size="small" sx={{bgcolor:'#e6f4ea',color:'#188038',height:15,fontSize:'0.56rem'}}/>}
+                            </Box>
+                          </Box>
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })
+              : casosF.length===0
+                ? <Box sx={{p:3,textAlign:'center'}}><SearchIcon sx={{fontSize:34,color:'text.disabled',mb:1}}/><Typography variant="body2" color="text.disabled">Nenhum caso</Typography>{nActiveF>0&&<Button size="small" onClick={clearF} sx={{mt:1,fontSize:'0.72rem'}}>Limpar filtros</Button>}</Box>
+                : casosF.sort((a,b)=>b.timestamp-a.timestamp).map(caso=>(
+                    <ListItem key={caso.id} disablePadding>
+                      <ListItemButton selected={sel?.id===caso.id} onClick={()=>goToCase(caso)}
+                        sx={{borderLeft:`3px solid ${sc(caso.status)}`,mx:1,my:.25,borderRadius:1.5,'&:hover':{bgcolor:'rgba(26,115,232,0.09)'},'&.Mui-selected':{bgcolor:'rgba(26,115,232,0.13)'},transition:'all .15s'}}>
+                        <ListItemAvatar><Avatar sx={{bgcolor:sc(caso.status),width:32,height:32,'& svg':{fontSize:15}}}>{SI[caso.status]||<LocationIcon/>}</Avatar></ListItemAvatar>
+                        <Box sx={{minWidth:0,width:'100%'}}>
+                          <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                            <Typography variant="body2" fontWeight={600} noWrap sx={{fontSize:'0.8rem',flex:1,mr:.5}}>{caso.bairro||'Sem bairro'}</Typography>
+                            <Chip label={caso.gravidade} size="small" sx={{bgcolor:gc(caso.gravidade),color:'white',height:15,fontSize:'0.56rem',flexShrink:0}}/>
+                          </Box>
+                          <Typography variant="caption" color="text.secondary" noWrap sx={{fontSize:'0.68rem'}}>{caso.agente}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{display:'block',fontSize:'0.65rem'}}>{fdt(caso.dataHora).date}</Typography>
+                        </Box>
+                      </ListItemButton>
+                    </ListItem>
+                  ))
+            }
+          </List>
+        </>
+      )}
+
+      {/* ── Tab 1: Análise ──────────────────────────────────────────────── */}
+      {sideTab===1&&(
+        <Box sx={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',minHeight:0}}>
+          <AnalysePanel/>
+        </Box>
+      )}
+
     </Box>
   );
 
@@ -996,51 +1038,73 @@ export default function MapaCasos() {
                   </IconButton>
                 </span></Tooltip>
 
-                {!isMobile&&(
-                  <Tooltip title="Filtros e Lista">
-                    <IconButton size="small" onClick={()=>setSidebar(v=>!v)}
-                      sx={{bgcolor:sidebar?'rgba(26,115,232,0.2)':'rgba(255,255,255,0.07)',color:sidebar?'primary.main':'inherit',borderRadius:1.5}}>
-                      <Badge badgeContent={nActiveF||undefined} color="warning" variant="dot"><FilterIcon sx={{fontSize:18}}/></Badge>
-                    </IconButton>
-                  </Tooltip>
-                )}
+                {/* Botões colapsáveis: Filtros, CSV, PDF */}
+                <Collapse in={showTools} orientation="horizontal" sx={{'& .MuiCollapse-wrapperInner':{display:'flex',alignItems:'center',gap:.3}}}>
 
-                {isDesk&&(
-                  <>
-                    <ToggleButtonGroup value={viewMode} exclusive size="small" onChange={(_,v)=>v&&setVM(v)}
-                      sx={{bgcolor:'rgba(255,255,255,0.07)',borderRadius:2,mx:.5}}>
-                      <ToggleButton value="casos" sx={{px:1,py:.3,fontSize:'0.68rem',gap:.4}}><PeopleIcon sx={{fontSize:14}}/>Casos</ToggleButton>
-                      <ToggleButton value="agrupado" sx={{px:1,py:.3,fontSize:'0.68rem',gap:.4}}><LocationCityIcon sx={{fontSize:14}}/>Bairros</ToggleButton>
-                    </ToggleButtonGroup>
-                    <Tooltip title={heatmap?'Ocultar Heatmap':'Mapa de Calor'}>
-                      <IconButton size="small" color={heatmap?'secondary':'inherit'} onClick={()=>setHeatmap(v=>!v)}><LayersIcon sx={{fontSize:18}}/></IconButton>
-                    </Tooltip>
-                    <FormControl size="small" sx={{minWidth:92}}>
-                      <Select value={mapType} onChange={e=>setMapType(e.target.value)}
-                        sx={{color:'white',bgcolor:'rgba(255,255,255,0.07)','& .MuiOutlinedInput-notchedOutline':{border:'none'},borderRadius:2,fontSize:'0.68rem'}}>
-                        <MenuItem value="roadmap">Padrão</MenuItem>
-                        <MenuItem value="satellite">Satélite</MenuItem>
-                        <MenuItem value="terrain">Terreno</MenuItem>
-                        <MenuItem value="hybrid">Híbrido</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Tooltip title="Exportar CSV"><IconButton size="small" color="inherit" onClick={exportCSV}><GetAppIcon sx={{fontSize:18}}/></IconButton></Tooltip>
-                    {/* Botão PDF desktop → pré-visualização */}
-                    <Tooltip title="Pré-visualizar / Exportar PDF"><span>
-                      <IconButton size="small" color="inherit" onClick={previewPDF} disabled={previewLoading}>
-                        {previewLoading?<CircularProgress size={15} color="inherit"/>:<PrintIcon sx={{fontSize:18}}/>}
-                      </IconButton>
-                    </span></Tooltip>
-                    <Tooltip title="Partilhar"><IconButton size="small" color="inherit" onClick={share}><ShareIcon sx={{fontSize:18}}/></IconButton></Tooltip>
-                    <Divider orientation="vertical" flexItem sx={{borderColor:'rgba(255,255,255,0.12)',mx:.5}}/>
-                    <Tooltip title={showAnalyse?'Fechar Análise':'Painel de Análise'}>
-                      <IconButton size="small" onClick={()=>setShowAnalyse(v=>!v)}
-                        sx={{bgcolor:showAnalyse?'rgba(0,188,212,0.2)':'rgba(255,255,255,0.07)',color:showAnalyse?'secondary.main':'inherit',borderRadius:1.5}}>
-                        <DashboardIcon sx={{fontSize:18}}/>
+                  {!isMobile&&(
+                    <Tooltip title="Filtros e Lista">
+                      <IconButton size="small" onClick={()=>setSidebar(v=>!v)}
+                        sx={{bgcolor:sidebar?'rgba(26,115,232,0.2)':'rgba(255,255,255,0.07)',color:sidebar?'primary.main':'inherit',borderRadius:1.5}}>
+                        <Badge badgeContent={nActiveF||undefined} color="warning" variant="dot"><FilterIcon sx={{fontSize:18}}/></Badge>
                       </IconButton>
                     </Tooltip>
-                  </>
-                )}
+                  )}
+
+                  {isDesk&&(
+                    <>
+                      <ToggleButtonGroup value={viewMode} exclusive size="small" onChange={(_,v)=>v&&setVM(v)}
+                        sx={{bgcolor:'rgba(255,255,255,0.07)',borderRadius:2,mx:.5}}>
+                        <ToggleButton value="casos" sx={{px:1,py:.3,fontSize:'0.68rem',gap:.4}}><PeopleIcon sx={{fontSize:14}}/>Casos</ToggleButton>
+                        <ToggleButton value="agrupado" sx={{px:1,py:.3,fontSize:'0.68rem',gap:.4}}><LocationCityIcon sx={{fontSize:14}}/>Bairros</ToggleButton>
+                      </ToggleButtonGroup>
+                      <Tooltip title={heatmap?'Ocultar Heatmap':'Mapa de Calor'}>
+                        <IconButton size="small" color={heatmap?'secondary':'inherit'} onClick={()=>setHeatmap(v=>!v)}><LayersIcon sx={{fontSize:18}}/></IconButton>
+                      </Tooltip>
+                      <FormControl size="small" sx={{minWidth:92}}>
+                        <Select value={mapType} onChange={e=>setMapType(e.target.value)}
+                          sx={{color:'white',bgcolor:'rgba(255,255,255,0.07)','& .MuiOutlinedInput-notchedOutline':{border:'none'},borderRadius:2,fontSize:'0.68rem'}}>
+                          <MenuItem value="roadmap">Padrão</MenuItem>
+                          <MenuItem value="satellite">Satélite</MenuItem>
+                          <MenuItem value="terrain">Terreno</MenuItem>
+                          <MenuItem value="hybrid">Híbrido</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Tooltip title="Exportar CSV">
+                        <IconButton size="small" color="inherit" onClick={exportCSV}><GetAppIcon sx={{fontSize:18}}/></IconButton>
+                      </Tooltip>
+                      <Tooltip title="Pré-visualizar / Exportar PDF"><span>
+                        <IconButton size="small" color="inherit" onClick={previewPDF} disabled={previewLoading}>
+                          {previewLoading?<CircularProgress size={15} color="inherit"/>:<PrintIcon sx={{fontSize:18}}/>}
+                        </IconButton>
+                      </span></Tooltip>
+                      <Tooltip title="Partilhar">
+                        <IconButton size="small" color="inherit" onClick={share}><ShareIcon sx={{fontSize:18}}/></IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+
+                </Collapse>
+
+                {/* Botão toggle show/hide dos botões */}
+                <Tooltip title={showTools?'Ocultar ferramentas':'Mostrar ferramentas'}>
+                  <IconButton
+                    size="small"
+                    color="inherit"
+                    onClick={()=>setShowTools(v=>!v)}
+                    sx={{
+                      width:{xs:36,sm:40}, height:{xs:36,sm:40},
+                      bgcolor: showTools?'rgba(26,115,232,0.15)':'rgba(255,255,255,0.07)',
+                      color:   showTools?'primary.main':'rgba(255,255,255,0.5)',
+                      borderRadius:1.5,
+                      transition:'all .2s',
+                      '&:hover':{bgcolor:'rgba(26,115,232,0.2)'},
+                    }}>
+                    {showTools
+                      ? <VisibilityIcon sx={{fontSize:{xs:17,sm:18}}}/>
+                      : <VisibilityOffIcon sx={{fontSize:{xs:17,sm:18}}}/>
+                    }
+                  </IconButton>
+                </Tooltip>
 
                 <IconButton size="small" color="inherit" onClick={e=>setMore(e.currentTarget)} sx={{width:{xs:36,sm:40},height:{xs:36,sm:40}}}>
                   <MoreVertIcon sx={{fontSize:{xs:19,sm:21}}}/>
@@ -1244,7 +1308,7 @@ export default function MapaCasos() {
                   {legend&&(
                     <Card elevation={3} sx={{
                       position:'absolute',bottom:24,
-                      right:showAnalyse?14:14,
+                      right:14,
                       transition:'right .25s',
                       bgcolor:'rgba(255,255,255,0.97)',borderRadius:2,p:1.5,minWidth:140,zIndex:10,
                       boxShadow:'0 2px 8px rgba(0,0,0,0.18)',border:'1px solid rgba(0,0,0,0.07)',
@@ -1277,33 +1341,7 @@ export default function MapaCasos() {
                   </Tooltip>
                 </Box>
 
-                {/* ── Painel de Análise lateral direito (desktop) ────────── */}
-                {showAnalyse&&(
-                  <Paper elevation={0} sx={{
-                    width:{sm:320,md:360,lg:380,xl:420},
-                    flexShrink:0,
-                    borderLeft:'1px solid rgba(255,255,255,0.07)',
-                    bgcolor:'background.paper',
-                    display:'flex',
-                    flexDirection:'column',
-                    overflow:'hidden',
-                  }}>
-                    {/* Cabeçalho do painel */}
-                    <Box sx={{px:2,py:1.5,display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.08)',flexShrink:0,background:'linear-gradient(135deg,rgba(0,188,212,0.12) 0%,rgba(0,188,212,0.03) 100%)'}}>
-                      <Box sx={{display:'flex',alignItems:'center',gap:1}}>
-                        <DashboardIcon sx={{fontSize:16,color:'secondary.main'}}/>
-                        <Typography variant="subtitle2" fontWeight={700} sx={{fontSize:'0.85rem'}}>Análise</Typography>
-                      </Box>
-                      <IconButton size="small" onClick={()=>setShowAnalyse(false)} sx={{'&:hover':{bgcolor:'rgba(234,67,53,0.12)',color:'error.main'},borderRadius:1.5,transition:'all .2s'}}>
-                        <CloseIcon sx={{fontSize:16}}/>
-                      </IconButton>
-                    </Box>
-                    {/* Conteúdo scrollável */}
-                    <Box sx={{flex:1,overflow:'auto'}}>
-                      <AnalysePanel/>
-                    </Box>
-                  </Paper>
-                )}
+                {/* ── Painel de Análise lateral direito removido — agora está no SidePanel ── */}
               </Box>
             )}
           </Box>
