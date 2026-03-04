@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box, Card, Chip, Avatar, List, ListItem, ListItemButton,
@@ -1083,15 +1084,19 @@ export default function MapaCasos() {
             )}
 
             {isMobile ? (
-              /* ── MOBILE: flex column, tabs empilhados, bottom nav no fluxo ── */
-              <Box sx={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minHeight:0}}>
+              /* ── MOBILE: flex column, tabs empilhados, bottom nav sempre visível ── */
+              <Box sx={{
+                flex:1, display:'flex', flexDirection:'column',
+                overflow:'hidden', minHeight:0,
+                height:'100%', maxHeight:'100%',
+              }}>
 
                 {/* Tab 0 — Mapa */}
                 <Box sx={{
                   flex: mobileTab===0 ? 1 : 0,
                   display: mobileTab===0 ? 'flex' : 'none',
                   flexDirection:'column',
-                  overflow:'hidden', minHeight:0,
+                  overflow:'hidden', minHeight:0, maxHeight:'100%',
                   position:'relative',
                 }}>
                   {loading&&<LinearProgress sx={{position:'absolute',top:0,left:0,right:0,zIndex:20}}/>}
@@ -1156,7 +1161,7 @@ export default function MapaCasos() {
                 <Box sx={{
                   flex: mobileTab===1 ? 1 : 0,
                   display: mobileTab===1 ? 'flex' : 'none',
-                  flexDirection:'column', overflow:'hidden', minHeight:0,
+                  flexDirection:'column', overflow:'hidden', minHeight:0, maxHeight:'100%',
                   bgcolor:'background.paper',
                 }}>
                   <CaseList/>
@@ -1166,17 +1171,22 @@ export default function MapaCasos() {
                 <Box sx={{
                   flex: mobileTab===2 ? 1 : 0,
                   display: mobileTab===2 ? 'flex' : 'none',
-                  flexDirection:'column', overflow:'hidden', minHeight:0,
+                  flexDirection:'column', overflow:'hidden', minHeight:0, maxHeight:'100%',
                   bgcolor:'background.paper',
                 }}>
                   <AnalysePanel/>
                 </Box>
 
-                {/* ── Bottom Navigation no fluxo (não fixo) ── */}
+                {/* ── Bottom Navigation — sempre visível, nunca encolhe ── */}
                 <BottomNavigation value={mobileTab} onChange={(_,v)=>setMobileTab(v)} showLabels
                   sx={{
-                    height:BOTTOM_H, flexShrink:0, zIndex:1200,
+                    height:BOTTOM_H,
+                    minHeight:BOTTOM_H,
+                    flexShrink:0,
+                    flexGrow:0,
+                    zIndex:1200,
                     boxShadow:'0 -2px 16px rgba(0,0,0,0.45)',
+                    position:'relative', /* garante que fica no fluxo */
                   }}>
                   <BottomNavigationAction label="Mapa"
                     icon={<Badge badgeContent={nActiveF||undefined} color="warning" variant="dot"><MapIcon/></Badge>}/>
