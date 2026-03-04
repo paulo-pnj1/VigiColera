@@ -180,9 +180,8 @@ button { cursor: pointer; }
 }
 
 .MuiBottomNavigation-root {
-  padding-bottom: var(--safe-bottom);
-  height: calc(var(--bottomnav-height) + var(--safe-bottom)) !important;
-  min-height: calc(var(--bottomnav-height) + var(--safe-bottom)) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  box-sizing: content-box !important;
 }
 
 @keyframes fadeIn {
