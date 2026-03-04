@@ -1,4 +1,8 @@
-
+/**
+ * VigiCólera Uige — MapaCasos
+ * Layout 100% responsivo — Mobile + Tablet + Desktop
+ * Com pré-visualização de PDF antes de baixar
+ */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box, Card, Chip, Avatar, List, ListItem, ListItemButton,
@@ -367,7 +371,8 @@ export default function MapaCasos() {
   const [previewUrl, setPreviewUrl]         = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Navegação mobile — 0=mapa, 1=lista, 2=análise
+  // ── toggle dos 3 botões superiores direitos ─────────────────────────────
+  const [showTools, setShowTools] = useState(true);
   const [mobileTab, setMobileTab] = useState(0);
 
   // Filtros
@@ -939,6 +944,8 @@ export default function MapaCasos() {
   );
 
   // ─── Menu Mais ─────────────────────────────────────────────────────────────
+  const [showMenuTools, setShowMenuTools] = useState(true);
+
   const MoreMenu = () => (
     <Menu anchorEl={moreAnchor} open={Boolean(moreAnchor)} onClose={()=>setMore(null)}
       PaperProps={{sx:{bgcolor:'#1c1c1c',border:'1px solid rgba(255,255,255,0.1)',minWidth:220}}}>
@@ -966,18 +973,34 @@ export default function MapaCasos() {
         </FormControl>
       </MenuItem>
       <Divider sx={{borderColor:'rgba(255,255,255,0.07)'}}/>
-      <MenuItem onClick={()=>{exportCSV();setMore(null);}}>
-        <GetAppIcon sx={{mr:1.5,fontSize:18}}/><Typography variant="body2">Exportar CSV</Typography>
+
+      {/* ── Toggle show/hide dos 3 botões ── */}
+      <MenuItem onClick={()=>setShowMenuTools(v=>!v)}
+        sx={{bgcolor:'rgba(255,255,255,0.04)',mb:.5}}>
+        {showMenuTools
+          ? <VisibilityOffIcon sx={{mr:1.5,fontSize:18,color:'text.secondary'}}/>
+          : <VisibilityIcon sx={{mr:1.5,fontSize:18,color:'primary.main'}}/>
+        }
+        <Typography variant="body2" color={showMenuTools?'text.secondary':'primary.main'}>
+          {showMenuTools?'Ocultar acções':'Mostrar acções'}
+        </Typography>
       </MenuItem>
-      {/* ITEM PDF → abre pré-visualização */}
-      <MenuItem onClick={()=>{previewPDF();setMore(null);}} disabled={previewLoading}>
-        <PrintIcon sx={{mr:1.5,fontSize:18,color:previewLoading?'text.disabled':'inherit'}}/>
-        <Typography variant="body2">{previewLoading?'A gerar…':'Pré-visualizar / Exportar PDF'}</Typography>
-        {previewLoading&&<CircularProgress size={12} sx={{ml:'auto'}}/>}
-      </MenuItem>
-      <MenuItem onClick={()=>{share();setMore(null);}}>
-        <ShareIcon sx={{mr:1.5,fontSize:18}}/><Typography variant="body2">Partilhar</Typography>
-      </MenuItem>
+
+      {/* ── CSV, PDF, Partilhar — colapsáveis ── */}
+      <Collapse in={showMenuTools}>
+        <MenuItem onClick={()=>{exportCSV();setMore(null);}}>
+          <GetAppIcon sx={{mr:1.5,fontSize:18}}/><Typography variant="body2">Exportar CSV</Typography>
+        </MenuItem>
+        <MenuItem onClick={()=>{previewPDF();setMore(null);}} disabled={previewLoading}>
+          <PrintIcon sx={{mr:1.5,fontSize:18,color:previewLoading?'text.disabled':'inherit'}}/>
+          <Typography variant="body2">{previewLoading?'A gerar…':'Pré-visualizar / Exportar PDF'}</Typography>
+          {previewLoading&&<CircularProgress size={12} sx={{ml:'auto'}}/>}
+        </MenuItem>
+        <MenuItem onClick={()=>{share();setMore(null);}}>
+          <ShareIcon sx={{mr:1.5,fontSize:18}}/><Typography variant="body2">Partilhar</Typography>
+        </MenuItem>
+      </Collapse>
+
     </Menu>
   );
 
@@ -1037,44 +1060,73 @@ export default function MapaCasos() {
                   </IconButton>
                 </span></Tooltip>
 
-                {!isMobile&&(
-                  <Tooltip title="Filtros e Lista">
-                    <IconButton size="small" onClick={()=>setSidebar(v=>!v)}
-                      sx={{bgcolor:sidebar?'rgba(26,115,232,0.2)':'rgba(255,255,255,0.07)',color:sidebar?'primary.main':'inherit',borderRadius:1.5}}>
-                      <Badge badgeContent={nActiveF||undefined} color="warning" variant="dot"><FilterIcon sx={{fontSize:18}}/></Badge>
-                    </IconButton>
-                  </Tooltip>
-                )}
+                {/* Botões colapsáveis: Filtros, CSV, PDF */}
+                <Collapse in={showTools} orientation="horizontal" sx={{'& .MuiCollapse-wrapperInner':{display:'flex',alignItems:'center',gap:.3}}}>
 
-                {isDesk&&(
-                  <>
-                    <ToggleButtonGroup value={viewMode} exclusive size="small" onChange={(_,v)=>v&&setVM(v)}
-                      sx={{bgcolor:'rgba(255,255,255,0.07)',borderRadius:2,mx:.5}}>
-                      <ToggleButton value="casos" sx={{px:1,py:.3,fontSize:'0.68rem',gap:.4}}><PeopleIcon sx={{fontSize:14}}/>Casos</ToggleButton>
-                      <ToggleButton value="agrupado" sx={{px:1,py:.3,fontSize:'0.68rem',gap:.4}}><LocationCityIcon sx={{fontSize:14}}/>Bairros</ToggleButton>
-                    </ToggleButtonGroup>
-                    <Tooltip title={heatmap?'Ocultar Heatmap':'Mapa de Calor'}>
-                      <IconButton size="small" color={heatmap?'secondary':'inherit'} onClick={()=>setHeatmap(v=>!v)}><LayersIcon sx={{fontSize:18}}/></IconButton>
-                    </Tooltip>
-                    <FormControl size="small" sx={{minWidth:92}}>
-                      <Select value={mapType} onChange={e=>setMapType(e.target.value)}
-                        sx={{color:'white',bgcolor:'rgba(255,255,255,0.07)','& .MuiOutlinedInput-notchedOutline':{border:'none'},borderRadius:2,fontSize:'0.68rem'}}>
-                        <MenuItem value="roadmap">Padrão</MenuItem>
-                        <MenuItem value="satellite">Satélite</MenuItem>
-                        <MenuItem value="terrain">Terreno</MenuItem>
-                        <MenuItem value="hybrid">Híbrido</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Tooltip title="Exportar CSV"><IconButton size="small" color="inherit" onClick={exportCSV}><GetAppIcon sx={{fontSize:18}}/></IconButton></Tooltip>
-                    {/* Botão PDF desktop → pré-visualização */}
-                    <Tooltip title="Pré-visualizar / Exportar PDF"><span>
-                      <IconButton size="small" color="inherit" onClick={previewPDF} disabled={previewLoading}>
-                        {previewLoading?<CircularProgress size={15} color="inherit"/>:<PrintIcon sx={{fontSize:18}}/>}
+                  {!isMobile&&(
+                    <Tooltip title="Filtros e Lista">
+                      <IconButton size="small" onClick={()=>setSidebar(v=>!v)}
+                        sx={{bgcolor:sidebar?'rgba(26,115,232,0.2)':'rgba(255,255,255,0.07)',color:sidebar?'primary.main':'inherit',borderRadius:1.5}}>
+                        <Badge badgeContent={nActiveF||undefined} color="warning" variant="dot"><FilterIcon sx={{fontSize:18}}/></Badge>
                       </IconButton>
-                    </span></Tooltip>
-                    <Tooltip title="Partilhar"><IconButton size="small" color="inherit" onClick={share}><ShareIcon sx={{fontSize:18}}/></IconButton></Tooltip>
-                  </>
-                )}
+                    </Tooltip>
+                  )}
+
+                  {isDesk&&(
+                    <>
+                      <ToggleButtonGroup value={viewMode} exclusive size="small" onChange={(_,v)=>v&&setVM(v)}
+                        sx={{bgcolor:'rgba(255,255,255,0.07)',borderRadius:2,mx:.5}}>
+                        <ToggleButton value="casos" sx={{px:1,py:.3,fontSize:'0.68rem',gap:.4}}><PeopleIcon sx={{fontSize:14}}/>Casos</ToggleButton>
+                        <ToggleButton value="agrupado" sx={{px:1,py:.3,fontSize:'0.68rem',gap:.4}}><LocationCityIcon sx={{fontSize:14}}/>Bairros</ToggleButton>
+                      </ToggleButtonGroup>
+                      <Tooltip title={heatmap?'Ocultar Heatmap':'Mapa de Calor'}>
+                        <IconButton size="small" color={heatmap?'secondary':'inherit'} onClick={()=>setHeatmap(v=>!v)}><LayersIcon sx={{fontSize:18}}/></IconButton>
+                      </Tooltip>
+                      <FormControl size="small" sx={{minWidth:92}}>
+                        <Select value={mapType} onChange={e=>setMapType(e.target.value)}
+                          sx={{color:'white',bgcolor:'rgba(255,255,255,0.07)','& .MuiOutlinedInput-notchedOutline':{border:'none'},borderRadius:2,fontSize:'0.68rem'}}>
+                          <MenuItem value="roadmap">Padrão</MenuItem>
+                          <MenuItem value="satellite">Satélite</MenuItem>
+                          <MenuItem value="terrain">Terreno</MenuItem>
+                          <MenuItem value="hybrid">Híbrido</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Tooltip title="Exportar CSV">
+                        <IconButton size="small" color="inherit" onClick={exportCSV}><GetAppIcon sx={{fontSize:18}}/></IconButton>
+                      </Tooltip>
+                      <Tooltip title="Pré-visualizar / Exportar PDF"><span>
+                        <IconButton size="small" color="inherit" onClick={previewPDF} disabled={previewLoading}>
+                          {previewLoading?<CircularProgress size={15} color="inherit"/>:<PrintIcon sx={{fontSize:18}}/>}
+                        </IconButton>
+                      </span></Tooltip>
+                      <Tooltip title="Partilhar">
+                        <IconButton size="small" color="inherit" onClick={share}><ShareIcon sx={{fontSize:18}}/></IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+
+                </Collapse>
+
+                {/* Botão toggle show/hide dos botões */}
+                <Tooltip title={showTools?'Ocultar ferramentas':'Mostrar ferramentas'}>
+                  <IconButton
+                    size="small"
+                    color="inherit"
+                    onClick={()=>setShowTools(v=>!v)}
+                    sx={{
+                      width:{xs:36,sm:40}, height:{xs:36,sm:40},
+                      bgcolor: showTools?'rgba(26,115,232,0.15)':'rgba(255,255,255,0.07)',
+                      color:   showTools?'primary.main':'rgba(255,255,255,0.5)',
+                      borderRadius:1.5,
+                      transition:'all .2s',
+                      '&:hover':{bgcolor:'rgba(26,115,232,0.2)'},
+                    }}>
+                    {showTools
+                      ? <VisibilityIcon sx={{fontSize:{xs:17,sm:18}}}/>
+                      : <VisibilityOffIcon sx={{fontSize:{xs:17,sm:18}}}/>
+                    }
+                  </IconButton>
+                </Tooltip>
 
                 <IconButton size="small" color="inherit" onClick={e=>setMore(e.currentTarget)} sx={{width:{xs:36,sm:40},height:{xs:36,sm:40}}}>
                   <MoreVertIcon sx={{fontSize:{xs:19,sm:21}}}/>
@@ -1139,16 +1191,20 @@ export default function MapaCasos() {
                 flexDirection:'column',
                 overflow:'hidden',
               }}>
-
-                {/* Tab 0 — Mapa */}
+                {/* Área de conteúdo — ocupa tudo menos o bottom nav */}
                 <Box sx={{
-                  display: mobileTab===0 ? 'flex' : 'none',
-                  flexDirection:'column',
                   flex:1,
-                  overflow:'hidden',
-                  position:'relative',
                   minHeight:0,
+                  position:'relative',
+                  overflow:'hidden',
                 }}>
+                  {/* Tab 0 — Mapa */}
+                  <Box sx={{
+                    position:'absolute', inset:0,
+                    display: mobileTab===0 ? 'flex' : 'none',
+                    flexDirection:'column',
+                    overflow:'hidden',
+                  }}>
                   {loading&&<LinearProgress sx={{position:'absolute',top:0,left:0,right:0,zIndex:20}}/>}
                   <LoadScript googleMapsApiKey={MAPS_KEY} libraries={MAPS_LIBS}
                     loadingElement={<Box sx={{display:'flex',alignItems:'center',justifyContent:'center',flex:1,bgcolor:'#e8eaed',flexDirection:'column',gap:2}}><CircularProgress color="primary"/><Typography variant="caption">A carregar mapa…</Typography></Box>}>
@@ -1156,16 +1212,14 @@ export default function MapaCasos() {
                       showHeatmap={heatmap} grupos={gruposF} casos={casosF} infoId={infoId}
                       onCase={goToCase} onGroup={goToGroup} onClose={()=>setInfoId(null)}/>
                   </LoadScript>
-
-                  {/* Pill contagem — canto superior esquerdo */}
+                  {/* Pill contagem */}
                   <Box sx={{position:'absolute',top:10,left:10,bgcolor:'rgba(255,255,255,0.96)',borderRadius:20,px:1.5,py:.5,zIndex:10,boxShadow:'0 1px 6px rgba(0,0,0,0.2)',display:'flex',alignItems:'center',gap:.7}}>
                     <PeopleIcon sx={{fontSize:13,color:'#1a73e8'}}/>
                     <Typography sx={{fontSize:'0.7rem',fontWeight:700,color:'#3c4043'}}>
                       {casosF.length} casos{nActiveF>0&&` · ${nActiveF} filtro${nActiveF>1?'s':''}`}
                     </Typography>
                   </Box>
-
-                  {/* Filtro + Heatmap — canto superior direito */}
+                  {/* Filtro + Heatmap */}
                   <Box sx={{position:'absolute',top:10,right:10,zIndex:10,display:'flex',flexDirection:'column',gap:.8}}>
                     <IconButton onClick={()=>setFilterOpen(true)} size="small"
                       sx={{bgcolor:'white',color:'#5f6368',width:40,height:40,boxShadow:'0 2px 8px rgba(0,0,0,0.22)',borderRadius:2}}>
@@ -1176,21 +1230,18 @@ export default function MapaCasos() {
                       <LayersIcon sx={{fontSize:18}}/>
                     </IconButton>
                   </Box>
-
-                  {/* Zoom — canto inferior direito, espaçado do fundo */}
+                  {/* Zoom */}
                   <Box sx={{position:'absolute',bottom:16,right:10,display:'flex',flexDirection:'column',zIndex:10,boxShadow:'0 2px 8px rgba(0,0,0,0.22)',borderRadius:1.5,overflow:'hidden'}}>
                     <IconButton onClick={()=>setZoom(p=>Math.min(p+1,21))} size="small" sx={{bgcolor:'white',color:'#5f6368',borderRadius:0,width:42,height:42,borderBottom:'1px solid #e0e0e0','&:hover':{bgcolor:'#f5f5f5'}}}><ZoomInIcon sx={{fontSize:21}}/></IconButton>
                     <IconButton onClick={()=>setZoom(p=>Math.max(p-1,1))} size="small" sx={{bgcolor:'white',color:'#5f6368',borderRadius:0,width:42,height:42,'&:hover':{bgcolor:'#f5f5f5'}}}><ZoomOutIcon sx={{fontSize:21}}/></IconButton>
                   </Box>
-
-                  {/* Centrar — acima do zoom */}
+                  {/* Centrar */}
                   <IconButton
                     onClick={()=>{ const {center:nc,zoom:nz}=calculateBounds(casosF.length>0?casosF:casos); setCenter(nc); setZoom(nz); }}
                     sx={{position:'absolute',bottom:106,right:10,zIndex:10,bgcolor:'white',color:'#5f6368',width:42,height:42,boxShadow:'0 2px 8px rgba(0,0,0,0.22)',borderRadius:1.5,'&:hover':{bgcolor:'#f5f5f5'}}}>
                     <MyLocationIcon sx={{fontSize:20}}/>
                   </IconButton>
-
-                  {/* Legenda — canto inferior esquerdo */}
+                  {/* Legenda */}
                   {legend&&(
                     <Card elevation={2} sx={{position:'absolute',bottom:16,left:10,bgcolor:'rgba(255,255,255,0.96)',borderRadius:2,p:1,minWidth:105,zIndex:10}}>
                       <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'center',mb:.4}}>
@@ -1205,30 +1256,29 @@ export default function MapaCasos() {
                       ))}
                     </Card>
                   )}
-                </Box>
+                  </Box>
 
-                {/* Tab 1 — Lista */}
-                <Box sx={{
-                  display: mobileTab===1 ? 'flex' : 'none',
-                  flexDirection:'column',
-                  flex:1,
-                  overflow:'hidden',
-                  minHeight:0,
-                  bgcolor:'background.paper',
-                }}>
-                  <CaseList/>
-                </Box>
+                  {/* Tab 1 — Lista */}
+                  <Box sx={{
+                    position:'absolute', inset:0,
+                    display: mobileTab===1 ? 'flex' : 'none',
+                    flexDirection:'column',
+                    overflow:'hidden',
+                    bgcolor:'background.paper',
+                  }}>
+                    <CaseList/>
+                  </Box>
 
-                {/* Tab 2 — Análise */}
-                <Box sx={{
-                  display: mobileTab===2 ? 'flex' : 'none',
-                  flexDirection:'column',
-                  flex:1,
-                  overflow:'hidden',
-                  minHeight:0,
-                  bgcolor:'background.paper',
-                }}>
-                  <AnalysePanel/>
+                  {/* Tab 2 — Análise */}
+                  <Box sx={{
+                    position:'absolute', inset:0,
+                    display: mobileTab===2 ? 'flex' : 'none',
+                    flexDirection:'column',
+                    overflow:'hidden',
+                    bgcolor:'background.paper',
+                  }}>
+                    <AnalysePanel/>
+                  </Box>
                 </Box>
 
                 {/* ── Bottom Navigation — sempre visível, nunca encolhe ── */}
@@ -1236,12 +1286,13 @@ export default function MapaCasos() {
                   sx={{
                     height:`${BOTTOM_H}px`,
                     minHeight:`${BOTTOM_H}px`,
-                    maxHeight:`${BOTTOM_H}px`,
                     flexShrink:0,
                     flexGrow:0,
                     width:'100%',
                     zIndex:1200,
                     boxShadow:'0 -2px 16px rgba(0,0,0,0.45)',
+                    paddingBottom:'env(safe-area-inset-bottom, 0px)',
+                    boxSizing:'content-box',
                   }}>
                   <BottomNavigationAction label="Mapa"
                     icon={<Badge badgeContent={nActiveF||undefined} color="warning" variant="dot"><MapIcon/></Badge>}/>
