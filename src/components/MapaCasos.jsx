@@ -1,4 +1,8 @@
-
+/**
+ * VigiCólera Uige — MapaCasos
+ * Layout 100% responsivo — Mobile + Tablet + Desktop
+ * Com pré-visualização de PDF antes de baixar
+ */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box, Card, Chip, Avatar, List, ListItem, ListItemButton,
@@ -1067,8 +1071,14 @@ export default function MapaCasos() {
             </Collapse>
           )}
 
-          {/* ── Corpo principal — ocupa todo o espaço restante ───────────────── */}
-          <Box sx={{display:'flex', flex:1, overflow:'hidden', minHeight:0}}>
+          {/* ── Corpo principal — altura explícita sem overflow ───────────────── */}
+          <Box sx={{
+            display:'flex',
+            flex:1,
+            overflow:'hidden',
+            minHeight:0,
+            height:0, /* força o flex child a respeitar o pai */
+          }}>
 
             {isDesk&&sidebar&&(
               <Paper elevation={0} sx={{width:{lg:340,xl:380},flexShrink:0,borderRight:'1px solid rgba(255,255,255,0.07)',bgcolor:'background.paper',display:'flex',flexDirection:'column'}}>
@@ -1084,20 +1094,23 @@ export default function MapaCasos() {
             )}
 
             {isMobile ? (
-              /* ── MOBILE: flex column, tabs empilhados, bottom nav sempre visível ── */
+              /* ── MOBILE ── */
               <Box sx={{
-                flex:1, display:'flex', flexDirection:'column',
-                overflow:'hidden', minHeight:0,
-                height:'100%', maxHeight:'100%',
+                width:'100%',
+                height:'100%',
+                display:'flex',
+                flexDirection:'column',
+                overflow:'hidden',
               }}>
 
                 {/* Tab 0 — Mapa */}
                 <Box sx={{
-                  flex: mobileTab===0 ? 1 : 0,
                   display: mobileTab===0 ? 'flex' : 'none',
                   flexDirection:'column',
-                  overflow:'hidden', minHeight:0, maxHeight:'100%',
+                  flex:1,
+                  overflow:'hidden',
                   position:'relative',
+                  minHeight:0,
                 }}>
                   {loading&&<LinearProgress sx={{position:'absolute',top:0,left:0,right:0,zIndex:20}}/>}
                   <LoadScript googleMapsApiKey={MAPS_KEY} libraries={MAPS_LIBS}
@@ -1159,9 +1172,11 @@ export default function MapaCasos() {
 
                 {/* Tab 1 — Lista */}
                 <Box sx={{
-                  flex: mobileTab===1 ? 1 : 0,
                   display: mobileTab===1 ? 'flex' : 'none',
-                  flexDirection:'column', overflow:'hidden', minHeight:0, maxHeight:'100%',
+                  flexDirection:'column',
+                  flex:1,
+                  overflow:'hidden',
+                  minHeight:0,
                   bgcolor:'background.paper',
                 }}>
                   <CaseList/>
@@ -1169,9 +1184,11 @@ export default function MapaCasos() {
 
                 {/* Tab 2 — Análise */}
                 <Box sx={{
-                  flex: mobileTab===2 ? 1 : 0,
                   display: mobileTab===2 ? 'flex' : 'none',
-                  flexDirection:'column', overflow:'hidden', minHeight:0, maxHeight:'100%',
+                  flexDirection:'column',
+                  flex:1,
+                  overflow:'hidden',
+                  minHeight:0,
                   bgcolor:'background.paper',
                 }}>
                   <AnalysePanel/>
@@ -1180,13 +1197,14 @@ export default function MapaCasos() {
                 {/* ── Bottom Navigation — sempre visível, nunca encolhe ── */}
                 <BottomNavigation value={mobileTab} onChange={(_,v)=>setMobileTab(v)} showLabels
                   sx={{
-                    height:BOTTOM_H,
-                    minHeight:BOTTOM_H,
+                    height:`${BOTTOM_H}px`,
+                    minHeight:`${BOTTOM_H}px`,
+                    maxHeight:`${BOTTOM_H}px`,
                     flexShrink:0,
                     flexGrow:0,
+                    width:'100%',
                     zIndex:1200,
                     boxShadow:'0 -2px 16px rgba(0,0,0,0.45)',
-                    position:'relative', /* garante que fica no fluxo */
                   }}>
                   <BottomNavigationAction label="Mapa"
                     icon={<Badge badgeContent={nActiveF||undefined} color="warning" variant="dot"><MapIcon/></Badge>}/>
